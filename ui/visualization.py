@@ -1,22 +1,22 @@
 import matplotlib.pyplot as plt
 import numpy as np
 import queue
-import tkinter as tk
 import logging
+from matplotlib.animation import FuncAnimation
 from matplotlib.gridspec import GridSpec
 from matplotlib.figure import Figure
+from matplotlib.lines import Line2D
 from matplotlib.axes import Axes
 from core import Iteration, CorrectDetectionGraph
 from typing import Union, Literal
 
 
 logger = logging.getLogger(__name__)
-queue_polling_interval_ms = 5
 
 
 def render_plots(
-    window: tk.Tk, q: queue.Queue[Union[Iteration, CorrectDetectionGraph, None]]
-) -> None:
+    q: queue.Queue[Union[Iteration, CorrectDetectionGraph, None]]
+) -> tuple[Figure, FuncAnimation]:
     fig = plt.figure(constrained_layout=True, figsize=(15, 10))
 
     if fig.canvas.manager:
@@ -26,9 +26,16 @@ def render_plots(
 
     logger.info("opening new window with plots")
 
+    ani = FuncAnimation(
+        fig,
+        lambda _: update_plots(ani, plots, q),
+        interval=50,
+        cache_frame_data=False,
+    )
+
     plt.show(block=False)
 
-    update_plots(window, fig, plots, q)
+    return (fig, ani)
 
 
 type PlotID = Literal[
@@ -89,9 +96,11 @@ def setup_plots(fig: Figure) -> Plots:
 
     # Images
     ax9 = fig.add_subplot(gs[0, 0])
+    ax9.axis("off")
     ax9.set_title("Image: Test")
 
     ax10 = fig.add_subplot(gs[1, 0])
+    ax10.axis("off")
     ax10.set_title("Image: Reference")
 
     # Graph
@@ -115,19 +124,19 @@ def setup_plots(fig: Figure) -> Plots:
 
 
 def update_plots(
-    window: tk.Tk,
-    fig: Figure,
+    ani: FuncAnimation,
     plots: Plots,
     q: queue.Queue[Union[Iteration, CorrectDetectionGraph, None]],
-) -> None:
-    if not plt.fignum_exists(fig.number):  # type: ignore
-        return
+) -> list[Line2D]:
+    print("update")
 
     try:
         r = q.get_nowait()
 
         if r is None:
-            return
+            ani.event_source.stop()
+
+            return []
 
         match r:
             case Iteration():
@@ -184,48 +193,22 @@ def update_plots(
                 plots["image_test"].imshow(r.images[0], cmap="gray")
                 plots["image_reference"].imshow(r.images[1], cmap="gray")
 
+                return []
+
             case CorrectDetectionGraph():
                 correct_detections_percentage = round(
                     sum([r.ys[i] for i in range(len(r.xs))]) / len(r.xs) * 100, 2
                 )
 
-                plots["graph"].lines[0].set_label(f"{correct_detections_percentage}%")
-                plots["graph"].lines[0].set_data(r.xs, r.ys)
+                graph_line = plots["graph"].lines[0]
+
+                graph_line.set_label(f"{correct_detections_percentage}%")
+                graph_line.set_data(r.xs, r.ys)
                 plots["graph"].legend(loc="lower right")
                 plots["graph"].relim()
                 plots["graph"].autoscale_view()
 
-        fig.canvas.draw_idle()
-        fig.canvas.flush_events()
+                return []
+
     except queue.Empty:
-        pass
-
-    window.after(queue_polling_interval_ms, update_plots, window, fig, plots, q)
-
-
-def render_average_chart(l_square_side: int) -> None:
-    pass
-    # average_y = []
-    # average_x = range(1, 10)
-
-    # for i in average_x:
-    #     sum = 0
-
-    #     database = db.build(l_square_side)
-
-    #     xs, ys = calculate_coordinates(database, i)
-
-    #     for j in range(len(xs)):
-    #         sum = sum + ys[j]
-
-    #     average_y.append(sum / len(xs))
-
-    # plt.subplot(2, 1, 2)
-    # plt.plot(average_x, average_y, label=f"l={l_square_side}")
-    # plt.title(
-    #     "Plot 2: Средний процент правильных детекций для разного кол-ва эталонов",
-    #     fontsize=10,
-    #     y=1.1,
-    # )
-    # plt.legend(loc="lower right")
-    # plt.show()
+        return []
