@@ -1,4 +1,4 @@
-import db
+import core.db as db
 import cv2
 import logging
 from scipy.spatial.distance import cityblock

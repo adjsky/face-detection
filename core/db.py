@@ -4,7 +4,7 @@ import logging
 import numpy as np
 import numpy.typing as npt
 from dataclasses import dataclass
-from methods import dct, dft, histogram, gradient, sc_scale
+from core.functions import dct, dft, histogram, gradient, sc_scale
 
 references_folder = "references"
 logger = logging.getLogger(__name__)

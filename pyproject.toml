@@ -1,6 +1,8 @@
 [tool.poetry]
-name = "face-detection"
-package-mode = false
+name = "face_detection"
+version = "0.1.0"
+description = ""
+authors = []
 
 [tool.poetry.dependencies]
 python = ">=3.12"
@@ -8,6 +10,10 @@ opencv-python = "^4.9.0.80"
 scipy = "^1.13.0"
 matplotlib = "^3.8.4"
 numpy = "^1.26.4"
+click = "^8.1.7"
+
+[tool.poetry.scripts]
+cli = "face_detection.cli:cli"
 
 [build-system]
 requires = ["poetry-core"]
