@@ -3,6 +3,7 @@ import os
 import logging
 import numpy as np
 import numpy.typing as npt
+import numpy.typing as npt
 from dataclasses import dataclass
 from core.functions import dct, dft, histogram, gradient, sc_scale
 
@@ -10,9 +11,9 @@ references_folder = "references"
 logger = logging.getLogger(__name__)
 
 type Image = cv2.typing.MatLike
-type ScScale = npt.NDArray
-type DFT = list[np.signedinteger]
-type DCT = list[np.signedinteger]
+type ScScale = tuple[npt.NDArray, cv2.typing.MatLike]
+type DFT = tuple[list[np.signedinteger], npt.NDArray[np.signedinteger]]
+type DCT = tuple[list[np.signedinteger], list[list]]
 type Histogram = cv2.typing.MatLike
 type Gradient = list[float]
 

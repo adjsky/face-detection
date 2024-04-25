@@ -3,8 +3,6 @@ import cv2
 import logging
 from scipy.spatial.distance import cityblock
 from dataclasses import dataclass
-from queue import Queue
-from typing import Union
 
 
 logger = logging.getLogger(__name__)
@@ -12,6 +10,7 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class Iteration:
+    key: str
     images: tuple[db.Image, db.Image]
     sc_scales: tuple[db.ScScale, db.ScScale]
     dfts: tuple[db.DFT, db.DFT]
@@ -29,10 +28,7 @@ class CorrectDetectionGraph:
 def calculate_correct_detections(
     l_square_side: int,
     n_stands: int,
-    q: Queue[Union[Iteration, CorrectDetectionGraph, None]],
-) -> None:
-    logger.info("starting calculations")
-
+) -> tuple[list[Iteration], CorrectDetectionGraph]:
     database = db.build(l_square_side)
 
     rights = 0
@@ -40,18 +36,19 @@ def calculate_correct_detections(
 
     xs: list[int] = []
     ys: list[float] = []
+    iterations: list[Iteration] = []
 
     for i in range(len(database.images)):
         for j in range(n_stands, len(database.images[i])):
-            min_dct = cityblock(database.dcts[i][j], database.dcts[0][0])
+            min_dct = cityblock(database.dcts[i][j][0], database.dcts[0][0][0])
 
             class_dct = 0
-            min_dft = cityblock(database.dfts[i][j], database.dfts[0][0])
+            min_dft = cityblock(database.dfts[i][j][0], database.dfts[0][0][0])
 
             class_dft = 0
             min_scale = cityblock(
-                database.sc_scales[i][j],
-                database.sc_scales[0][0],
+                database.sc_scales[i][j][0],
+                database.sc_scales[0][0][0],
             )
 
             class_scale = 0
@@ -69,10 +66,10 @@ def calculate_correct_detections(
             class_gradient = 0
 
             for k in range(len(database.images)):
-                for l in range(0, n_stands):
+                for l in range(n_stands):
                     manhattan_dct = cityblock(
-                        database.dcts[i][j],
-                        database.dcts[k][l],
+                        database.dcts[i][j][0],
+                        database.dcts[k][l][0],
                     )
 
                     if manhattan_dct < min_dct:
@@ -80,8 +77,8 @@ def calculate_correct_detections(
                         class_dct = k
 
                     manhattan_dft = cityblock(
-                        database.dfts[i][j],
-                        database.dfts[k][l],
+                        database.dfts[i][j][0],
+                        database.dfts[k][l][0],
                     )
 
                     if manhattan_dft < min_dft:
@@ -89,8 +86,8 @@ def calculate_correct_detections(
                         class_dft = k
 
                     manhattan_scale = cityblock(
-                        database.sc_scales[i][j],
-                        database.sc_scales[k][l],
+                        database.sc_scales[i][j][0],
+                        database.sc_scales[k][l][0],
                     )
 
                     if manhattan_scale < min_scale:
@@ -116,8 +113,9 @@ def calculate_correct_detections(
                         min_gradient = manhattan_gradient
                         class_gradient = k
 
-                    q.put(
+                    iterations.append(
                         Iteration(
+                            f"{i}-{j}-{k}-{l}",
                             (database.images[i][j], database.images[k][l]),
                             (database.sc_scales[i][j], database.sc_scales[k][l]),
                             (database.dfts[i][j], database.dfts[k][l]),
@@ -147,13 +145,10 @@ def calculate_correct_detections(
             xs.append(alls)
             ys.append(rights / alls)
 
-            q.put(
-                CorrectDetectionGraph(
-                    xs[:],
-                    ys[:],
-                )
-            )
-
-    logger.info("finished calculations, sending the sentinel value")
-
-    q.put(None)
+    return (
+        iterations,
+        CorrectDetectionGraph(
+            xs[:],
+            ys[:],
+        ),
+    )

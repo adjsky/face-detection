@@ -14,7 +14,7 @@ def sc_scale(input: cv2.typing.MatLike, l: int):
     resize_forscale = cv2.resize(input, (n, m), interpolation=cv2.INTER_LINEAR)
     vector_scale = resize_forscale.ravel()
 
-    return vector_scale
+    return (vector_scale, resize_forscale)
 
 
 def zig_zag(C: npt.NDArray[np.signedinteger]):
@@ -40,13 +40,13 @@ def dft(img: cv2.typing.MatLike):
         cv2.magnitude(dft_shift[:, :, 0], dft_shift[:, :, 1])
     )
 
-    return zig_zag(magnitude_spectrum)
+    return (zig_zag(magnitude_spectrum), magnitude_spectrum)
 
 
 def dct(img: cv2.typing.MatLike):
     dct = cv2.dct(np.float32(img))  # type: ignore
 
-    return zig_zag(dct)
+    return (zig_zag(dct), dct)
 
 
 def histogram(img: cv2.typing.MatLike) -> cv2.typing.MatLike:
