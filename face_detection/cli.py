@@ -27,6 +27,8 @@ for module in modules_to_ignore_logs:
 
 logger = logging.getLogger(__name__)
 result_folder = "res"
+iterations_folder = "iterations"
+correct_detections_graph_filename = "graph"
 
 
 @click.group()
@@ -50,18 +52,32 @@ def build_chart(n_stands: int, l_square_side: int) -> None:
 
     click.echo(f"Процент правильных детекций: {correct_detections_percentage}%")
 
-    if os.path.exists(f"./{result_folder}"):
-        shutil.rmtree(f"./{result_folder}")
+    if os.path.exists(result_folder):
+        shutil.rmtree(result_folder)
 
-    os.mkdir(f"./{result_folder}")
+    os.makedirs(os.path.join(result_folder, iterations_folder))
 
-    click.echo(f"Сохраняем результаты итераций в папку {result_folder}.")
+    click.echo(f"Используем папку `{result_folder}` для сохранения результатов.")
+    click.echo(
+        f"Сохраняем график правильных детекций в файл `{correct_detections_graph_filename}.webp`."
+    )
 
-    fig = plt.figure(constrained_layout=True, figsize=(15, 10))
+    graph_fig, ax = plt.subplots()
+    ax.plot(cdg.xs, cdg.ys, label=f"{correct_detections_percentage}%")
+    ax.set_title("Процент правильных детекций")
+    ax.legend(loc="lower right")
+
+    graph_fig.savefig(
+        f"{os.path.join(result_folder, correct_detections_graph_filename)}.webp"
+    )
+
+    click.echo(f"Сохраняем результаты итераций в папку `{iterations_folder}`.")
+
+    iterations_fig = plt.figure(constrained_layout=True, figsize=(15, 10))
 
     with click.progressbar(iterations) as bar:
         for i in bar:
-            process_iteration(fig, i)
+            process_iteration(iterations_fig, i)
 
 
 def render_plots(fig: Figure, r: Iteration) -> None:
@@ -132,7 +148,7 @@ def render_plots(fig: Figure, r: Iteration) -> None:
 
 def process_iteration(fig: Figure, i: Iteration) -> None:
     render_plots(fig, i)
-    fig.savefig(f"./{result_folder}/{i.key}.webp")
+    fig.savefig(f"{os.path.join(result_folder, iterations_folder, i.key)}.webp")
     fig.clear()
 
 
